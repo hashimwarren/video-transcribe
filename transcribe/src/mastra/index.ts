@@ -1,18 +1,15 @@
-
 import { Mastra } from '@mastra/core/mastra';
 import { PinoLogger } from '@mastra/loggers';
 import { LibSQLStore } from '@mastra/libsql';
-import { weatherWorkflow } from './workflows/weather-workflow';
-import { weatherAgent } from './agents/weather-agent';
-import { toolCallAppropriatenessScorer, completenessScorer, translationScorer } from './scorers/weather-scorer';
+import { videoTranscriptionWorkflow } from './workflows/video-transcription-workflow';
+import { videoTranscriptionAgent } from './agents/video-transcription-agent';
 
 export const mastra = new Mastra({
-  workflows: { weatherWorkflow },
-  agents: { weatherAgent },
-  scorers: { toolCallAppropriatenessScorer, completenessScorer, translationScorer },
+  workflows: { videoTranscriptionWorkflow },
+  agents: { videoTranscriptionAgent },
   storage: new LibSQLStore({
     // stores observability, scores, ... into memory storage, if it needs to persist, change to file:../mastra.db
-    url: ":memory:",
+    url: ':memory:',
   }),
   logger: new PinoLogger({
     name: 'Mastra',
@@ -20,10 +17,10 @@ export const mastra = new Mastra({
   }),
   telemetry: {
     // Telemetry is deprecated and will be removed in the Nov 4th release
-    enabled: false, 
+    enabled: false,
   },
   observability: {
     // Enables DefaultExporter and CloudExporter for AI tracing
-    default: { enabled: true }, 
+    default: { enabled: true },
   },
 });
