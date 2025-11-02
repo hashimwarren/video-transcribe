@@ -12,7 +12,7 @@ export async function transcribeVideo({ buffer, filename, mimeType }: Transcript
   }
 
   const formData = new FormData();
-  const blob = new Blob([buffer], { type: mimeType ?? 'application/octet-stream' });
+  const blob = new Blob([new Uint8Array(buffer)], { type: mimeType ?? 'application/octet-stream' });
 
   formData.append('file', blob, filename);
   formData.append('model', 'whisper-1');
