@@ -44,13 +44,11 @@ export default function Home() {
         });
         requestBody = formData;
       } else {
-        // Validate file form data
+        // Validate file is selected
         if (!file) {
-          throw new z.ZodError([{
-            code: 'custom',
-            path: ['file'],
-            message: 'Please select a file',
-          }]);
+          setError('Please select a file');
+          setStatus('');
+          return;
         }
         
         // For file upload, we'll need to handle it differently
