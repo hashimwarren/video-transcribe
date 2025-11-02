@@ -3,19 +3,29 @@
 import { useState } from 'react';
 import { z } from 'zod';
 
-const formSchema = z.object({
-  sourceType: z.enum(['url']),
+const urlFormSchema = z.object({
+  sourceType: z.literal('url'),
   url: z.string().url('Please enter a valid URL'),
   prompt: z.string().optional(),
 });
 
+const fileFormSchema = z.object({
+  sourceType: z.literal('file'),
+  file: z.instanceof(File, { message: 'Please select a file' }),
+  prompt: z.string().optional(),
+});
+
+type InputMode = 'url' | 'file';
+
 export default function Home() {
+  const [inputMode, setInputMode] = useState<InputMode>('url');
   const [url, setUrl] = useState('');
+  const [file, setFile] = useState<File | null>(null);
   const [prompt, setPrompt] = useState('');
   const [transcript, setTranscript] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [status, setStatus] = useState('Enter a video URL to get started.');
+  const [status, setStatus] = useState('Enter a video URL or upload a file to get started.');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,12 +33,32 @@ export default function Home() {
     setTranscript('');
     
     try {
-      // Validate form data
-      const formData = formSchema.parse({
-        sourceType: 'url',
-        url,
-        prompt: prompt || undefined,
-      });
+      let requestBody;
+      
+      if (inputMode === 'url') {
+        // Validate URL form data
+        const formData = urlFormSchema.parse({
+          sourceType: 'url',
+          url,
+          prompt: prompt || undefined,
+        });
+        requestBody = formData;
+      } else {
+        // Validate file form data
+        if (!file) {
+          throw new z.ZodError([{
+            code: 'custom',
+            path: ['file'],
+            message: 'Please select a file',
+          }]);
+        }
+        
+        // For file upload, we'll need to handle it differently
+        // Since the API expects a path, we'll show an error for now
+        setError('File upload requires server-side file handling. Please use a URL instead.');
+        setStatus('');
+        return;
+      }
       
       setIsLoading(true);
       setStatus('Transcribing video...');
@@ -38,7 +68,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(requestBody),
       });
       
       const data = await response.json();
@@ -83,17 +113,52 @@ export default function Home() {
       <p>Enter a video URL to transcribe it using AI</p>
 
       <form onSubmit={handleSubmit}>
-        <label>
-          Video URL
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://example.com/video.mp4"
-            required
-            disabled={isLoading}
-          />
-        </label>
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input
+              type="radio"
+              value="url"
+              checked={inputMode === 'url'}
+              onChange={(e) => setInputMode(e.target.value as InputMode)}
+              disabled={isLoading}
+            />
+            Video URL
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input
+              type="radio"
+              value="file"
+              checked={inputMode === 'file'}
+              onChange={(e) => setInputMode(e.target.value as InputMode)}
+              disabled={isLoading}
+            />
+            Upload File
+          </label>
+        </div>
+
+        {inputMode === 'url' ? (
+          <label>
+            Video URL
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com/video.mp4"
+              required
+              disabled={isLoading}
+            />
+          </label>
+        ) : (
+          <label>
+            Video File
+            <input
+              type="file"
+              accept="video/*,audio/*"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              disabled={isLoading}
+            />
+          </label>
+        )}
 
         <label>
           Prompt (optional)
