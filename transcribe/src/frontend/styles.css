@@ -1,0 +1,205 @@
+:root {
+  color-scheme: light dark;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  font-size: 16px;
+  --surface: rgba(255, 255, 255, 0.85);
+  --surface-dark: rgba(20, 20, 20, 0.85);
+  --border: rgba(0, 0, 0, 0.08);
+  --border-dark: rgba(255, 255, 255, 0.12);
+  --accent: #2563eb;
+  --accent-dark: #60a5fa;
+  --shadow: 0 20px 35px -25px rgba(15, 23, 42, 0.45);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 3rem 1.5rem;
+  background: radial-gradient(circle at top, #0f172a 0%, #111827 40%, #020617 100%);
+  color: #f8fafc;
+}
+
+.app-shell {
+  display: grid;
+  gap: 2rem;
+  width: min(900px, 100%);
+}
+
+.card {
+  background: var(--surface);
+  backdrop-filter: blur(16px);
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 1.8rem;
+  color: #0f172a;
+}
+
+@media (prefers-color-scheme: dark) {
+  .card {
+    background: var(--surface-dark);
+    border-color: var(--border-dark);
+    color: #f8fafc;
+  }
+}
+
+.card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.card__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.6rem;
+}
+
+.card__subtitle {
+  margin: 0 0 1.75rem;
+  color: rgba(15, 23, 42, 0.7);
+}
+
+@media (prefers-color-scheme: dark) {
+  .card__subtitle {
+    color: rgba(226, 232, 240, 0.75);
+  }
+}
+
+.form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.form__field {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.form__label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+input[type='text'],
+input[type='url'],
+input[type='file'],
+.button,
+textarea {
+  font: inherit;
+}
+
+input[type='text'],
+input[type='url'],
+textarea {
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.7);
+  color: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  input[type='text'],
+  input[type='url'],
+  textarea {
+    background: rgba(15, 23, 42, 0.65);
+    border-color: rgba(148, 163, 184, 0.3);
+  }
+}
+
+input[type='text']:focus,
+input[type='url']:focus,
+textarea:focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.7);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.button {
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  padding: 0.75rem 1.6rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 25px -20px rgba(37, 99, 235, 0.8);
+}
+
+.button:active {
+  transform: translateY(0);
+}
+
+@media (prefers-color-scheme: dark) {
+  .button {
+    background: var(--accent-dark);
+    color: #0f172a;
+  }
+}
+
+.button--ghost {
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  padding: 0.45rem 1.1rem;
+}
+
+.status {
+  margin-top: 1.5rem;
+  font-size: 0.95rem;
+  color: rgba(15, 23, 42, 0.75);
+}
+
+@media (prefers-color-scheme: dark) {
+  .status {
+    color: rgba(226, 232, 240, 0.75);
+  }
+}
+
+.transcript {
+  width: 100%;
+  min-height: 240px;
+  resize: vertical;
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  padding: 1rem;
+  color: inherit;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+}
+
+@media (prefers-color-scheme: dark) {
+  .transcript {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(148, 163, 184, 0.3);
+  }
+}
+
+textarea::placeholder {
+  color: rgba(100, 116, 139, 0.6);
+}
+
+.status--error {
+  color: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  .status--error {
+    color: #fca5a5;
+  }
+}

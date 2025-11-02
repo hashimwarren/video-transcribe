@@ -69,7 +69,7 @@ export async function transcribeVideoWithOpenAI(input: VideoTranscriptionInput) 
     const fileName = deriveFileName(resolved.original);
     const form = new FormData();
     form.append('model', 'gpt-4o-mini-transcribe');
-    form.append('response_format', 'verbose_json');
+    form.append('response_format', 'json');
     if (prompt) {
       form.append('prompt', prompt);
     }

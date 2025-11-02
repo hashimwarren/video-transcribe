@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mastra Video Transcriber</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+
+      body {
+        margin: 0;
+        padding: 2rem;
+        display: flex;
+        justify-content: center;
+        background: radial-gradient(circle at 20% 20%, rgba(86, 110, 255, 0.12), transparent 55%),
+          radial-gradient(circle at 80% 0%, rgba(79, 235, 198, 0.2), transparent 65%),
+          linear-gradient(180deg, rgba(9, 14, 32, 0.95), rgba(9, 14, 32, 0.9));
+        min-height: 100vh;
+        color: #f4f6ff;
+      }
+
+      main {
+        width: min(720px, 100%);
+        background: rgba(18, 24, 46, 0.85);
+        border-radius: 20px;
+        padding: 2.5rem;
+        box-shadow: 0 24px 60px rgba(12, 17, 38, 0.6);
+        border: 1px solid rgba(115, 130, 255, 0.2);
+        backdrop-filter: blur(18px);
+      }
+
+      h1 {
+        margin: 0 0 0.5rem;
+        font-size: clamp(2rem, 4vw, 2.8rem);
+        letter-spacing: -0.03em;
+      }
+
+      p {
+        margin: 0 0 2rem;
+        color: rgba(240, 244, 255, 0.76);
+        line-height: 1.6;
+      }
+
+      form {
+        display: grid;
+        gap: 1.5rem;
+        background: rgba(15, 21, 40, 0.7);
+        padding: 1.8rem;
+        border-radius: 16px;
+        border: 1px solid rgba(115, 130, 255, 0.18);
+      }
+
+      button {
+        appearance: none;
+        border: none;
+        border-radius: 999px;
+        padding: 0.85rem 1.6rem;
+        font-size: 1rem;
+        font-weight: 600;
+        background: linear-gradient(135deg, #5b8dff 0%, #41e1c4 100%);
+        color: #08101f;
+        cursor: pointer;
+        transition: transform 150ms ease, box-shadow 150ms ease;
+        justify-self: flex-start;
+      }
+
+      button:disabled {
+        background: rgba(94, 110, 165, 0.4);
+        color: rgba(13, 21, 40, 0.6);
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+      }
+
+      button:not(:disabled):hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 30px rgba(64, 178, 255, 0.45);
+      }
+
+      .status {
+        min-height: 1.5rem;
+        font-size: 0.95rem;
+        color: rgba(172, 185, 255, 0.9);
+      }
+
+      .status--error {
+        color: #ff6b6b;
+      }
+
+      pre {
+        background: rgba(8, 12, 26, 0.75);
+        border-radius: 14px;
+        padding: 1.6rem;
+        border: 1px solid rgba(115, 130, 255, 0.16);
+        line-height: 1.7;
+        font-size: 1rem;
+        color: rgba(240, 244, 255, 0.88);
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin: 0;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .copy-button {
+        appearance: none;
+        border: 1px solid rgba(115, 130, 255, 0.24);
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+        background: rgba(8, 12, 28, 0.85);
+        color: rgba(244, 246, 255, 0.85);
+        cursor: pointer;
+        transition: all 150ms ease;
+        margin-left: auto;
+      }
+
+      .copy-button:hover {
+        background: rgba(115, 130, 255, 0.2);
+        border-color: rgba(115, 130, 255, 0.4);
+      }
+
+      .result-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+      }
+
+      code {
+        background: rgba(8, 12, 28, 0.85);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      }
+
+      @media (max-width: 640px) {
+        body {
+          padding: 1.5rem;
+        }
+
+        main {
+          padding: 1.75rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Mastra Video Transcriber</h1>
+      <p>Transcribe video files using OpenAI's Whisper model through Mastra.</p>
+
+      <form id="transcribe-form">
+        <p style="margin-bottom: 1rem; color: rgba(240, 244, 255, 0.76);">
+          This will transcribe the video file: <code>evals-debate.mp4</code>
+        </p>
+
+        <button id="submit-button" type="submit">Transcribe Video</button>
+        <div id="status" class="status">Ready to transcribe.</div>
+      </form>
+
+      <section id="result-section" class="hidden">
+        <div class="result-header">
+          <h2>Transcript</h2>
+          <button id="copy-button" class="copy-button" type="button">Copy</button>
+        </div>
+        <pre id="transcript-output"></pre>
+      </section>
+    </main>
+
+    <script>
+      const form = document.getElementById('transcribe-form');
+      const submitButton = document.getElementById('submit-button');
+      const statusEl = document.getElementById('status');
+      const resultSection = document.getElementById('result-section');
+      const transcriptOutput = document.getElementById('transcript-output');
+      const copyButton = document.getElementById('copy-button');
+
+      function setStatus(message, isError = false) {
+        statusEl.textContent = message;
+        statusEl.classList.toggle('status--error', isError);
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        submitButton.disabled = true;
+        setStatus('Transcribing video...');
+        resultSection.classList.add('hidden');
+        transcriptOutput.textContent = '';
+
+        try {
+          // Use the workflow API directly
+          const response = await fetch('/api/workflows/video-transcription-workflow/invoke', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              input: {
+                sourceType: 'file',
+                path: 'c:/Users/hashi/Documents/Coding/video-transcribe/transcribe/evals-debate.mp4'
+              }
+            }),
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to transcribe video');
+          }
+
+          transcriptOutput.textContent = result.transcript || 'No transcript available';
+          resultSection.classList.remove('hidden');
+          setStatus('Transcription complete.');
+        } catch (error) {
+          console.error('Failed to transcribe video', error);
+          setStatus(error.message || 'Unexpected error while transcribing the video.', true);
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+
+      copyButton.addEventListener('click', async () => {
+        const text = transcriptOutput.textContent.trim();
+        if (!text) {
+          setStatus('There is no transcript to copy yet.', true);
+          return;
+        }
+
+        try {
+          await navigator.clipboard.writeText(text);
+          setStatus('Transcript copied to clipboard.');
+        } catch (error) {
+          setStatus('Unable to copy to clipboard.', true);
+        }
+      });
+    </script>
+  </body>
+</html>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+
+      body {
+        margin: 0;
+        padding: 2rem;
+        display: flex;
+        justify-content: center;
+        background: radial-gradient(circle at 20% 20%, rgba(86, 110, 255, 0.12), transparent 55%),
+          radial-gradient(circle at 80% 0%, rgba(79, 235, 198, 0.2), transparent 65%),
+          linear-gradient(180deg, rgba(9, 14, 32, 0.95), rgba(9, 14, 32, 0.9));
+        min-height: 100vh;
+        color: #f4f6ff;
+      }
+
+      main {
+        width: min(720px, 100%);
+        background: rgba(18, 24, 46, 0.85);
+        border-radius: 20px;
+        padding: 2.5rem;
+        box-shadow: 0 24px 60px rgba(12, 17, 38, 0.6);
+        border: 1px solid rgba(115, 130, 255, 0.2);
+        backdrop-filter: blur(18px);
+      }
+
+      h1 {
+        margin: 0 0 0.5rem;
+        font-size: clamp(2rem, 4vw, 2.8rem);
+        letter-spacing: -0.03em;
+      }
+
+      p {
+        margin: 0 0 2rem;
+        color: rgba(240, 244, 255, 0.76);
+        line-height: 1.6;
+      }
+
+      form {
+        display: grid;
+        gap: 1.5rem;
+        background: rgba(15, 21, 40, 0.7);
+        padding: 1.8rem;
+        border-radius: 16px;
+        border: 1px solid rgba(115, 130, 255, 0.18);
+      }
+
+      label {
+        font-weight: 600;
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+        letter-spacing: 0.01em;
+      }
+
+      input[type='file'] {
+        padding: 1rem;
+        border-radius: 12px;
+        border: 1px solid rgba(115, 130, 255, 0.24);
+        background: rgba(8, 12, 28, 0.85);
+        color: rgba(244, 246, 255, 0.85);
+      }
+
+      button {
+        appearance: none;
+        border: none;
+        border-radius: 999px;
+        padding: 0.85rem 1.6rem;
+        font-size: 1rem;
+        font-weight: 600;
+        background: linear-gradient(135deg, #5b8dff 0%, #41e1c4 100%);
+        color: #08101f;
+        cursor: pointer;
+        transition: transform 150ms ease, box-shadow 150ms ease;
+        justify-self: flex-start;
+      }
+
+      button:disabled {
+        background: rgba(94, 110, 165, 0.4);
+        color: rgba(13, 21, 40, 0.6);
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+      }
+
+      button:not(:disabled):hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 30px rgba(64, 178, 255, 0.45);
+      }
+
+      .status {
+        min-height: 1.5rem;
+        font-size: 0.95rem;
+        color: rgba(172, 185, 255, 0.9);
+      }
+
+      pre {
+        background: rgba(8, 12, 26, 0.75);
+        border-radius: 14px;
+        padding: 1.6rem;
+        border: 1px solid rgba(115, 130, 255, 0.16);
+        line-height: 1.7;
+        font-size: 1rem;
+        color: rgba(240, 244, 255, 0.88);
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin: 0;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @media (max-width: 640px) {
+        body {
+          padding: 1.5rem;
+        }
+
+        main {
+          padding: 1.75rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Video Transcriber</h1>
+      <p>Upload a local video file and let Mastra handle the transcription for you.</p>
+
+      <form id="transcribe-form">
+        <label>
+          Select a video file
+          <input id="video-input" type="file" name="video" accept="video/*" required />
+        </label>
+
+        <button id="submit-button" type="submit">Transcribe video</button>
+        <div id="status" class="status"></div>
+      </form>
+
+      <section id="result-section" class="hidden">
+        <h2>Transcript</h2>
+        <pre id="transcript-output"></pre>
+      </section>
+    </main>
+
+    <script>
+      const form = document.getElementById('transcribe-form');
+      const videoInput = document.getElementById('video-input');
+      const submitButton = document.getElementById('submit-button');
+      const statusEl = document.getElementById('status');
+      const resultSection = document.getElementById('result-section');
+      const transcriptOutput = document.getElementById('transcript-output');
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        if (!videoInput.files?.length) {
+          statusEl.textContent = 'Please choose a video file before submitting.';
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('video', videoInput.files[0]);
+
+        submitButton.disabled = true;
+        statusEl.textContent = 'Uploading video and requesting transcript…';
+        resultSection.classList.add('hidden');
+        transcriptOutput.textContent = '';
+
+        try {
+          const response = await fetch('/api/transcribe', {
+            method: 'POST',
+            body: formData,
+          });
+
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error || 'The server could not process the video.');
+          }
+
+          transcriptOutput.textContent = payload.transcript;
+          resultSection.classList.remove('hidden');
+          statusEl.textContent = 'Transcription complete.';
+        } catch (error) {
+          console.error('Failed to transcribe video', error);
+          statusEl.textContent = error.message || 'Unexpected error while transcribing the video.';
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
+
+=======
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="card">
+        <h1 class="card__title">Mastra Video Transcriber</h1>
+        <p class="card__subtitle">
+          Select a video file and send it to your running Mastra server for transcription.
+        </p>
+        <form id="transcribe-form" class="form">
+          <label class="form__field">
+            <span class="form__label">Mastra server URL</span>
+            <input
+              type="url"
+              id="server-url"
+              name="server-url"
+              value="http://localhost:3000"
+              required
+              placeholder="http://localhost:3000"
+            />
+          </label>
+          <label class="form__field">
+            <span class="form__label">Agent ID</span>
+            <input
+              type="text"
+              id="agent-id"
+              name="agent-id"
+              value="transcribeAgent"
+              required
+              placeholder="transcribeAgent"
+            />
+          </label>
+          <label class="form__field">
+            <span class="form__label">Video file</span>
+            <input type="file" id="video-input" name="video" accept="video/*" required />
+          </label>
+          <button type="submit" class="button">Send to Mastra</button>
+        </form>
+        <p id="status" class="status" role="status">Select a video to get started.</p>
+      </section>
+      <section class="card">
+        <header class="card__header">
+          <h2 class="card__title">Transcript</h2>
+          <button id="copy-button" class="button button--ghost" type="button">Copy</button>
+        </header>
+        <textarea
+          id="transcript-output"
+          class="transcript"
+          placeholder="The transcript will appear here."
+          rows="12"
+          readonly
+        ></textarea>
+      </section>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
+>>>>>>> theirs
